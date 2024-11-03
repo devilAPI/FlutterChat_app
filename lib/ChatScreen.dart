@@ -185,20 +185,33 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chat with ${widget.recipientId}'),
+        title: Text(isMultiSelectMode 
+          ? '${selectedMessages.length} Selected' 
+          : 'Chat with ${widget.recipientId}'),
         backgroundColor: Colors.deepPurple,
         actions: [
-          if (!isMultiSelectMode) // Show refresh button only if not in multi-select mode
+          if (isMultiSelectMode) ...[
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.close),
+              tooltip: 'Stop selection',
               onPressed: () {
-                retrieveMessages();
+                setState(() {
+                  selectedMessages.clear();
+                  isMultiSelectMode = false;
+                  firstSelectionLongPressed = false;
+                });
               },
             ),
-          if (isMultiSelectMode) // Show copy button only if in multi-select mode
             IconButton(
               icon: const Icon(Icons.copy),
+              tooltip: 'Copy selected messages',
               onPressed: copySelectedMessages,
+            ),
+          ] else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh messages',
+              onPressed: retrieveMessages,
             ),
         ],
       ),
