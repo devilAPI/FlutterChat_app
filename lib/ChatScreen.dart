@@ -343,32 +343,35 @@ class MessageBubble extends StatelessWidget {
     final decryptedText =
         isEncrypted ? decryptMessage(message.text) : message.text;
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 5, horizontal: isMe ? 10 : 20),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? Colors.blue[100]
-            : (isMe ? Colors.blue : Colors.grey[300]),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          MarkdownBody(
-            data: decryptedText,
-            styleSheet: MarkdownStyleSheet(
-              p: TextStyle(color: isMe ? Colors.white : Colors.black),
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.blue[100]
+              : (isMe ? Colors.blue : Colors.grey[300]),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            MarkdownBody(
+              data: decryptedText,
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(color: isMe ? Colors.white : Colors.black),
+              ),
             ),
-          ),
-          if (isImageUrl(decryptedText))
-            FadeInImage(
-              placeholder: MemoryImage(kTransparentImage),
-              image: NetworkImage(decryptedText),
-              fit: BoxFit.cover,
-            ),
-        ],
+            if (isImageUrl(decryptedText))
+              FadeInImage(
+                placeholder: MemoryImage(kTransparentImage),
+                image: NetworkImage(decryptedText),
+                fit: BoxFit.cover,
+              ),
+          ],
+        ),
       ),
     );
   }
