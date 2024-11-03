@@ -140,7 +140,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // Check if the encrypted message contains the expected delimiter
     if (!encryptedMessage.contains(':')) {
       print("Decryption error: Invalid format of encrypted message");
-      return "null";
+      return "Decryption error: Invalid format of encrypted message";
     }
 
     try {
@@ -152,7 +152,7 @@ class _ChatScreenState extends State<ChatScreen> {
       // Check if both parts (IV and encrypted text) are present
       if (parts.length != 2) {
         print("Decryption error: Expected 2 parts, but got ${parts.length}");
-        return "null";
+        return "Decryption error: Expected 2 parts, but got ${parts.length}";
       }
 
       final iv = encrypt.IV.fromBase64(parts[0]);
@@ -162,7 +162,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return decrypted;
     } catch (e) {
       print("Decryption error: $e");
-      return "null";
+      return "Decryption error: $e";
     }
   }
 
