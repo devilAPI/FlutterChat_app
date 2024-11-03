@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
@@ -6,6 +7,28 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:flutter/services.dart'; // Import for clipboard functionality
+import 'LoginScreen.dart';
+
+class ChatApp extends StatelessWidget {
+  const ChatApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Chat App',
+      theme: ThemeData(
+        appBarTheme: const AppBarTheme(
+          toolbarTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
 
 class ChatScreen extends StatefulWidget {
   final String userId;
@@ -34,11 +57,39 @@ class _ChatScreenState extends State<ChatScreen> {
   bool firstSelectionLongPressed =
       false; // Track if first selection was long pressed
   bool isSending = false; // Flag to track if a message is being sent
+  Timer? _refreshTimer;
+  String? _lastMessageTimestamp;
+  bool _hasNewMessage = false; // Track if there is a new message
+  bool _showScrollButton = false;
 
   @override
   void initState() {
     super.initState();
     retrieveMessages();
+    // Start periodic refresh every 3 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted) {
+        retrieveMessages();
+      }
+    });
+
+    _scrollController.addListener(() {
+      final shouldShow = _scrollController.hasClients &&
+          _scrollController.position.pixels <
+              (_scrollController.position.maxScrollExtent - 100);
+
+      if (shouldShow != _showScrollButton) {
+        setState(() {
+          _showScrollButton = shouldShow;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> retrieveMessages() async {
@@ -51,25 +102,27 @@ class _ChatScreenState extends State<ChatScreen> {
 
         if (jsonResponse.containsKey('messages') &&
             jsonResponse['messages'] is List) {
-          setState(() {
-            messages = (jsonResponse['messages'] as List)
-                .map((msg) => Message(
-                      msg['senderId'],
-                      msg['message'],
-                      DateTime.parse(msg['timestamp']),
-                    ))
-                .toList();
-            // Scroll to the bottom when messages are retrieved
-            scrollToBottom();
-          });
-        } else {
-          print('Error: Messages key not found or not a list');
+          final List<Message> newMessages = (jsonResponse['messages'] as List)
+              .map((msg) => Message(
+                    msg['senderId'],
+                    msg['message'],
+                    DateTime.parse(msg['timestamp']),
+                  ))
+              .toList();
+
+          // Only update state if there are new messages
+          if (mounted && (messages.isEmpty || 
+              newMessages.last.timestamp.toString() != _lastMessageTimestamp)) {
+            setState(() {
+              messages = newMessages;
+              _lastMessageTimestamp = newMessages.last.timestamp.toString();
+              _hasNewMessage = true; // Indicate that there is a new message
+            });
+          }
         }
-      } else {
-        print('Error retrieving messages: ${response.body}');
       }
     } catch (e) {
-      print('Error retrieving messages: $e');
+      print('Error refreshing messages: $e');
     }
   }
 
@@ -334,21 +387,29 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
           ),
-          Positioned(
-            right: 16.0,
-            bottom: 80.0, // Position above message input area
-            child: FloatingActionButton(
-              mini: true, // Makes the FAB smaller
-              onPressed: () {
-                _scrollController.animateTo(
-                  _scrollController.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              },
-              child: const Icon(Icons.arrow_downward),
+          if (_showScrollButton)
+            Positioned(
+              right: 16.0,
+              bottom: 80.0,
+              child: FloatingActionButton(
+                backgroundColor: _hasNewMessage ? Colors.deepPurple : Colors.white,
+                onPressed: () {
+                  _scrollController.animateTo(
+                    _scrollController.position.maxScrollExtent,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                  );
+                  setState(() {
+                    _hasNewMessage = false; // Reset new message indicator
+                    _showScrollButton = false; // Hide button after scrolling down
+                  });
+                },
+                child: Icon(
+                  Icons.arrow_downward,
+                  color: _hasNewMessage ? Colors.white : Colors.deepPurple,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -357,7 +418,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool isSameDate(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
         date1.month == date2.month &&
-        date1.day == date2.day;
+        date2.day == date2.day;
   }
 }
 

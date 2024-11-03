@@ -3,7 +3,7 @@ import 'package:flutter_chat/LoginScreen.dart';
 import 'HomeScreen.dart';
 
 void main() {
-  runApp(const ChatApp());
+  runApp(ChatApp());
 }
 
 class ChatApp extends StatelessWidget {
