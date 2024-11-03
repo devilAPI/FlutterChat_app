@@ -184,7 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Chat with ${widget.recipientId}'),
-        backgroundColor: Colors.deepPurple[900],
+        backgroundColor: Colors.deepPurple,
         actions: [
           if (!isMultiSelectMode) // Show refresh button only if not in multi-select mode
             IconButton(
@@ -357,7 +357,7 @@ class MessageBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.blue[100]
-              : (isMe ? Colors.blue : Colors.grey[300]),
+              : (isMe ? Colors.deepPurple[500] : Colors.grey[300]),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
