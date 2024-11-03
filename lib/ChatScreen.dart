@@ -11,11 +11,13 @@ class ChatScreen extends StatefulWidget {
   final String userId;
   final String encryptionKey;
   final String recipientId;
+  final String hashedKey;
 
   const ChatScreen({
     required this.userId,
     required this.encryptionKey,
     required this.recipientId,
+    required this.hashedKey,
   });
 
   @override
@@ -42,7 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> retrieveMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://krasserserver.com:8004/chat_api/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.encryptionKey}'));
+          'http://krasserserver.com:8004/chat_api/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.hashedKey}'));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -106,7 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
             'user1Id': widget.userId,
             'user2Id': widget.recipientId,
             'message': encryptedMessage,
-            'encryptionKey': widget.encryptionKey,
+            'encryptionKey': widget.hashedKey,
           },
         );
 
@@ -356,7 +358,7 @@ class MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.blue[100]
+              ? Colors.deepPurple[200]
               : (isMe ? Colors.deepPurple[500] : Colors.grey[300]),
           borderRadius: BorderRadius.circular(10),
         ),

@@ -30,8 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(
           builder: (context) => ChatScreen(
             userId: widget.username,
-            encryptionKey: hashedKey,
+            encryptionKey: encryptionKey,
             recipientId: recipientId,
+            hashedKey: hashedKey,
           ),
         ),
       );
