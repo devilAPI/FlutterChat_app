@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://krasserserver.com:8004/login.php'),
+        Uri.parse('http://krasserserver.com:8004/chat_api/login.php'),
         headers: <String, String>{
           'Content-Type': 'application/x-www-form-urlencoded',
         },

@@ -41,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://krasserserver.com:8004/register.php'),
+        Uri.parse('http://krasserserver.com:8004/chat_api/register.php'),
         headers: <String, String>{
           'Content-Type': 'application/x-www-form-urlencoded',
         },

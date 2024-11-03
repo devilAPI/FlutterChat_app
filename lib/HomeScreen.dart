@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_chat/LoginScreen.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert'; // for the utf8.encode method
 import 'ChatScreen.dart';
 import 'SettingsScreen.dart';
+import 'LoginScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
 
-  const HomeScreen({super.key, required this.username});
+  const HomeScreen({Key? key, required this.username}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -15,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController recipientController = TextEditingController();
   final TextEditingController encryptionKeyController = TextEditingController();
-
   bool _showImages = true;
 
   void startChat() {
@@ -23,12 +24,16 @@ class _HomeScreenState extends State<HomeScreen> {
     String encryptionKey = encryptionKeyController.text;
 
     if (recipientId.isNotEmpty && encryptionKey.isNotEmpty) {
+      // Hash the encryption key using SHA-256
+      var bytes = utf8.encode(encryptionKey); // data being hashed
+      var hashedKey = sha256.convert(bytes).toString();
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ChatScreen(
             userId: widget.username,
-            encryptionKey: encryptionKey,
+            encryptionKey: hashedKey,
             recipientId: recipientId,
           ),
         ),
@@ -68,39 +73,52 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat Home'),
-        backgroundColor: Colors.deepPurple[900],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: openSettings,
-          ),
-        ],
+        title: Text('Home Screen'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: recipientController,
-              decoration: const InputDecoration(labelText: 'Recipient ID'),
-            ),
-            TextField(
-              controller: encryptionKeyController,
-              decoration: const InputDecoration(labelText: 'Encryption Key'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: startChat,
-              child: const Text('Start Chat'),
-            ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: logout,
-              child: const Text('Logout'),
-            ),
-          ],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextField(
+                controller: recipientController,
+                decoration: InputDecoration(
+                  labelText: 'Recipient ID',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: encryptionKeyController,
+                decoration: InputDecoration(
+                  labelText: 'Encryption Key',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+                obscureText: true,
+              ),
+              SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  ElevatedButton(
+                    onPressed: startChat,
+                    child: Text('Start Chat'),
+                  ),
+                  ElevatedButton(
+                    onPressed: openSettings,
+                    child: Text('Settings'),
+                  ),
+                  ElevatedButton(
+                    onPressed: logout,
+                    child: Text('Logout'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

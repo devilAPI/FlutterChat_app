@@ -42,7 +42,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> retrieveMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://krasserserver.com:8004/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.encryptionKey}'));
+          'http://krasserserver.com:8004/chat_api/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.encryptionKey}'));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -85,7 +85,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final iv = encrypt.IV.fromLength(16);
     final encrypter = encrypt.Encrypter(encrypt.AES(key));
 
-    return encrypter.encrypt(message, iv: iv).base64;
+    final encrypted = encrypter.encrypt(message, iv: iv);
+    final encryptedMessage = '${iv.base64}:${encrypted.base64}';
+
+    return encryptedMessage;
   }
 
   Future<void> sendMessage() async {
@@ -98,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://krasserserver.com:8004/save.php'),
+          Uri.parse('http://krasserserver.com:8004/chat_api/save.php'),
           body: {
             'user1Id': widget.userId,
             'user2Id': widget.recipientId,
@@ -132,17 +135,19 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String decryptMessage(String encryptedMessage) {
+    // Check if the encrypted message contains the expected delimiter
     if (!encryptedMessage.contains(':')) {
       print("Decryption error: Invalid format of encrypted message");
       return "null";
     }
 
     try {
+      // Ensure the encryption key is 32 characters long
       final key = encrypt.Key.fromUtf8(
           widget.encryptionKey.padRight(32, '0').substring(0, 32));
       final parts = encryptedMessage.split(':');
 
-      // Check if both parts are present
+      // Check if both parts (IV and encrypted text) are present
       if (parts.length != 2) {
         print("Decryption error: Expected 2 parts, but got ${parts.length}");
         return "null";
@@ -150,11 +155,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
       final iv = encrypt.IV.fromBase64(parts[0]);
       final encrypter = encrypt.Encrypter(encrypt.AES(key));
+      final decrypted = encrypter.decrypt64(parts[1], iv: iv);
 
-      return encrypter.decrypt64(parts[1], iv: iv);
+      return decrypted;
     } catch (e) {
       print("Decryption error: $e");
-      return "null"; // or handle it accordingly
+      return "null";
     }
   }
 
@@ -380,7 +386,9 @@ class MessageBubble extends StatelessWidget {
     return url.endsWith('.png') ||
         url.endsWith('.jpg') ||
         url.endsWith('.jpeg') ||
-        url.endsWith('.gif');
+        url.endsWith('.gif') ||
+        url.endsWith('.bmp') ||
+        url.endsWith('.webp');
   }
 }
 
