@@ -18,9 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> login() async {
     String username = usernameController.text
         .trim()
-        .replaceAll(' ', '_'); // Ersetzen Sie Leerzeichen durch '_'
+        .replaceAll(' ', '_'); // Replace spaces with '_'
     final String password = passwordController.text;
-
     if (username.isEmpty || password.isEmpty) {
       // Show an error if fields are empty
       showDialog(
@@ -40,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-
     try {
       final response = await http.post(
         Uri.parse('http://krasserserver.com:8004/chat_api/login.php'),
@@ -60,8 +58,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) =>
-                  HomeScreen(username: username)), // Pass username
+            builder: (context) => HomeScreen(
+              username: username,
+            ),
+          ),
         );
       } else {
         // Show error message from the response
@@ -88,7 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Error'),
-          content: const Text('Failed to login. Please try again later.'),
+          content:
+              const Text('An error occurred during login. Please try again.'),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -113,30 +114,49 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Login'), backgroundColor: Colors.deepPurple[900]),
+        title: const Text('Login'),
+        backgroundColor: Colors.deepPurple[900],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: login,
-              child: const Text('Login'),
-            ),
-            TextButton(
-              onPressed: navigateToRegister,
-              child: const Text('Register'),
-            ),
-          ],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  ElevatedButton(
+                    onPressed: login,
+                    child: const Text('Login'),
+                  ),
+                  ElevatedButton(
+                    onPressed: navigateToRegister,
+                    child: const Text('Register'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

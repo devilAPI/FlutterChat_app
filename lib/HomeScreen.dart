@@ -7,7 +7,6 @@ import 'LoginScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String username;
-
   const HomeScreen({Key? key, required this.username}) : super(key: key);
 
   @override
@@ -22,12 +21,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void startChat() {
     String recipientId = recipientController.text;
     String encryptionKey = encryptionKeyController.text;
-
     if (recipientId.isNotEmpty && encryptionKey.isNotEmpty) {
       // Hash the encryption key using SHA-256
       var bytes = utf8.encode(encryptionKey); // data being hashed
       var hashedKey = sha256.convert(bytes).toString();
-
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -74,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Home Screen'),
+        backgroundColor: Colors.deepPurple[900],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

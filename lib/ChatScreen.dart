@@ -12,11 +12,11 @@ class ChatScreen extends StatefulWidget {
   final String encryptionKey;
   final String recipientId;
 
-  const ChatScreen(
-      {super.key,
-      required this.userId,
-      required this.encryptionKey,
-      required this.recipientId});
+  const ChatScreen({
+    required this.userId,
+    required this.encryptionKey,
+    required this.recipientId,
+  });
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
