@@ -71,54 +71,69 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home Screen'),
+        title: const Text('Home Screen'),
         backgroundColor: Colors.deepPurple,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              TextField(
-                controller: recipientController,
-                decoration: InputDecoration(
-                  labelText: 'Recipient ID',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: encryptionKeyController,
-                decoration: InputDecoration(
-                  labelText: 'Encryption Key',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                ),
-                obscureText: true,
-              ),
-              SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  ElevatedButton(
-                    onPressed: startChat,
-                    child: Text('Start Chat'),
+                  TextField(
+                    controller: recipientController,
+                    decoration: InputDecoration(
+                      labelText: 'Recipient ID',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
                   ),
-                  ElevatedButton(
-                    onPressed: openSettings,
-                    child: Text('Settings'),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: encryptionKeyController,
+                    decoration: InputDecoration(
+                      labelText: 'Encryption Key',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    obscureText: true,
                   ),
-                  ElevatedButton(
-                    onPressed: logout,
-                    child: Text('Logout'),
+                  SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      ElevatedButton(
+                        onPressed: startChat,
+                        child: Text('Start Chat'),
+                      ),
+                      ElevatedButton(
+                        onPressed: openSettings,
+                        child: Text('Settings'),
+                      ),
+                      ElevatedButton(
+                        onPressed: logout,
+                        child: Text('Logout'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: 16.0,
+            bottom: 16.0,
+            child: Text(
+              'Logged in as ${widget.username}',
+              style: const TextStyle(
+                fontSize: 16.0,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

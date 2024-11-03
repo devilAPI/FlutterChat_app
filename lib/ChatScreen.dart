@@ -202,120 +202,139 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                DateTime currentMessageDate = messages[index].timestamp;
-                String formattedDate =
-                    DateFormat.yMMMMd().format(currentMessageDate);
-
-                bool showDateSeparator = index == 0 ||
-                    !isSameDate(
-                        currentMessageDate, messages[index - 1].timestamp);
-
-                return GestureDetector(
-                  onTap: () {
-                    // If already in selection mode, toggle selection state
-                    if (isMultiSelectMode) {
-                      setState(() {
-                        if (selectedMessages.contains(index)) {
-                          selectedMessages.remove(index);
-                          // Exit multi-select mode if no messages are selected
-                          if (selectedMessages.isEmpty) {
-                            isMultiSelectMode = false;
-                            firstSelectionLongPressed =
-                                false; // Reset the long press state
-                          }
-                        } else {
-                          selectedMessages.add(index);
-                        }
-                      });
-                    }
-                    // If not in selection mode, initiate selection mode
-                    else {
-                      setState(() {
-                        firstSelectionLongPressed =
-                            false; // Reset the long press state
-                      });
-                    }
-                  },
-                  onLongPress: () {
-                    // If not in selection mode, enter selection mode and select the first message
-                    if (!isMultiSelectMode) {
-                      setState(() {
-                        selectedMessages.add(index);
-                        isMultiSelectMode = true; // Enter multi-select mode
-                        firstSelectionLongPressed =
-                            true; // Set long press state
-                      });
-                    }
-                    // If already in selection mode, allow multi-select
-                    else {
-                      setState(() {
-                        selectedMessages.add(index);
-                      });
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      if (showDateSeparator)
-                        Container(
-                          margin: const EdgeInsets.symmetric(vertical: 5),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 2, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            formattedDate,
-                            style: const TextStyle(
-                                color: Colors.black54, fontSize: 14),
-                          ),
-                        ),
-                      MessageBubble(
-                        message: messages[index],
-                        currentUserId: widget.userId,
-                        isEncrypted: true,
-                        decryptMessage: decryptMessage,
-                        isSelected: selectedMessages
-                            .contains(index), // Pass selection state to bubble
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Row(
+          Column(
             children: [
               Expanded(
-                child: TextField(
-                  controller: messageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Message',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.multiline,
-                  maxLines: null, // Allows the TextField to expand vertically
-                  onSubmitted: (text) {
-                    // Send message when Enter is pressed
-                    sendMessage();
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    DateTime currentMessageDate = messages[index].timestamp;
+                    String formattedDate =
+                        DateFormat.yMMMMd().format(currentMessageDate);
+
+                    bool showDateSeparator = index == 0 ||
+                        !isSameDate(
+                            currentMessageDate, messages[index - 1].timestamp);
+
+                    return GestureDetector(
+                      onTap: () {
+                        // If already in selection mode, toggle selection state
+                        if (isMultiSelectMode) {
+                          setState(() {
+                            if (selectedMessages.contains(index)) {
+                              selectedMessages.remove(index);
+                              // Exit multi-select mode if no messages are selected
+                              if (selectedMessages.isEmpty) {
+                                isMultiSelectMode = false;
+                                firstSelectionLongPressed =
+                                    false; // Reset the long press state
+                              }
+                            } else {
+                              selectedMessages.add(index);
+                            }
+                          });
+                        }
+                        // If not in selection mode, initiate selection mode
+                        else {
+                          setState(() {
+                            firstSelectionLongPressed =
+                                false; // Reset the long press state
+                          });
+                        }
+                      },
+                      onLongPress: () {
+                        // If not in selection mode, enter selection mode and select the first message
+                        if (!isMultiSelectMode) {
+                          setState(() {
+                            selectedMessages.add(index);
+                            isMultiSelectMode = true; // Enter multi-select mode
+                            firstSelectionLongPressed =
+                                true; // Set long press state
+                          });
+                        }
+                        // If already in selection mode, allow multi-select
+                        else {
+                          setState(() {
+                            selectedMessages.add(index);
+                          });
+                        }
+                      },
+                      child: Column(
+                        children: [
+                          if (showDateSeparator)
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2, horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                formattedDate,
+                                style: const TextStyle(
+                                    color: Colors.black54, fontSize: 14),
+                              ),
+                            ),
+                          MessageBubble(
+                            message: messages[index],
+                            currentUserId: widget.userId,
+                            isEncrypted: true,
+                            decryptMessage: decryptMessage,
+                            isSelected: selectedMessages
+                                .contains(index), // Pass selection state to bubble
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ),
-              IconButton(
-                icon: isSending
-                    ? const CircularProgressIndicator()
-                    : const Icon(Icons.send),
-                onPressed:
-                    isSending ? null : sendMessage, // Disable while sending
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: messageController,
+                      decoration: const InputDecoration(
+                        labelText: 'Message',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.multiline,
+                      maxLines: null, // Allows the TextField to expand vertically
+                      onSubmitted: (text) {
+                        // Send message when Enter is pressed
+                        sendMessage();
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: isSending
+                        ? const CircularProgressIndicator()
+                        : const Icon(Icons.send),
+                    onPressed:
+                        isSending ? null : sendMessage, // Disable while sending
+                  ),
+                ],
               ),
             ],
+          ),
+          Positioned(
+            right: 16.0,
+            bottom: 80.0, // Position above message input area
+            child: FloatingActionButton(
+              mini: true, // Makes the FAB smaller
+              onPressed: () {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: const Icon(Icons.arrow_downward),
+            ),
           ),
         ],
       ),
@@ -358,7 +377,7 @@ class MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.deepPurple[200]
+              ? Colors.blue[100]
               : (isMe ? Colors.deepPurple[500] : Colors.grey[300]),
           borderRadius: BorderRadius.circular(10),
         ),

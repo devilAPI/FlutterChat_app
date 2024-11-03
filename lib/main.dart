@@ -3,7 +3,7 @@ import 'package:flutter_chat/LoginScreen.dart';
 import 'HomeScreen.dart';
 
 void main() {
-  runApp(ChatApp());
+  runApp(const ChatApp());
 }
 
 class ChatApp extends StatelessWidget {
@@ -14,7 +14,7 @@ class ChatApp extends StatelessWidget {
     return MaterialApp(
       title: 'Chat App',
       theme: ThemeData(
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           toolbarTextStyle: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -30,7 +30,7 @@ class ChatApp extends StatelessWidget {
           ),
         ),
       ),
-      home: LoginScreen(),
+      home: const LoginScreen(),
     );
   }
 }
