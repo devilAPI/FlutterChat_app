@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'HomeScreen.dart'; // Import the HomeScreen
-import 'RegisterScreen.dart'; // Import the RegisterScreen
+import 'RegisterScreen.dart';
+import 'Config.dart'; // Import the RegisterScreen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+    final String backendUrl = Config.backendUrl;
+
 
   Future<void> login() async {
     String username = usernameController.text
@@ -41,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     try {
       final response = await http.post(
-        Uri.parse('http://krasserserver.com:8004/chat_api/login.php'),
+        Uri.parse(Config.backendUrl + '/login.php'),
         headers: <String, String>{
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -115,7 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Login'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Config.accentColor,
+        automaticallyImplyLeading: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

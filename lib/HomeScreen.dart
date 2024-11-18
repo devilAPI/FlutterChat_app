@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert'; // for the utf8.encode method
 import 'ChatScreen.dart';
+import 'Config.dart';
 import 'SettingsScreen.dart';
 import 'LoginScreen.dart';
 
@@ -72,7 +73,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Screen'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Config.accentColor,
+        automaticallyImplyLeading: false,
       ),
       body: Stack(
         children: [

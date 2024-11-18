@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'Config.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
-
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final String backendUrl = Config.backendUrl;
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
+  bool isUsernameError = false; // Track if there is an error with the username
+  bool isPasswordInsecure = false; // Track if the password is insecure
+  bool isPasswordMismatch = false; // Track if the passwords do not match
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> register() async {
-    String username = usernameController.text
-        .trim()
-        .replaceAll(' ', '_'); // Ersetzen Sie Leerzeichen durch '_'
+    String username = usernameController.text.trim().replaceAll(' ', '_'); // Replace spaces with '_'
     final String password = passwordController.text;
+    final String confirmPassword = confirmPasswordController.text;
 
     if (username.isEmpty || password.isEmpty) {
       // Show an error if fields are empty
@@ -39,9 +50,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (password != confirmPassword) {
+      setState(() {
+        isPasswordMismatch = true;
+      });
+      return;
+    }
+
+    setState(() {
+      isPasswordMismatch = false;
+      isPasswordInsecure = password.length < 8; // Example insecurity check
+    });
+
     try {
       final response = await http.post(
-        Uri.parse('http://krasserserver.com:8004/chat_api/register.php'),
+        Uri.parse(backendUrl + '/register.php'),
         headers: <String, String>{
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -53,23 +76,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final Map<String, dynamic> jsonResponse = json.decode(response.body);
 
-      // Check response status
       if (jsonResponse['status'] == 'success') {
-        Navigator.pop(
-            context); // Go back to LoginScreen after successful registration
+        Navigator.pop(context); // Go back to LoginScreen after successful registration
       } else {
-        // Show error message from the response
+        setState(() {
+          isUsernameError = jsonResponse['message'] == 'Username already in use';
+        });
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Error'),
             content: Text(jsonResponse['message']),
-            actions: <Widget>[
+            actions: [
               TextButton(
+                onPressed: () => Navigator.pop(context),
                 child: const Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
               ),
             ],
           ),
@@ -77,18 +98,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       print('Error during registration: $e');
-      // Show a general error message
+      setState(() {
+        isUsernameError = true; // Assume error is due to username already in use
+      });
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Error'),
-          content: const Text('Failed to register. Please try again later.'),
-          actions: <Widget>[
+          content: const Text('An error occurred during registration.'),
+          actions: [
             TextButton(
+              onPressed: () => Navigator.pop(context),
               child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
             ),
           ],
         ),
@@ -101,27 +122,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Register'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Config.accentColor,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: register,
-              child: const Text('Register'),
-            ),
-          ],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextField(
+                controller: usernameController,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: const Icon(Icons.person),
+                  errorText: isUsernameError ? 'Username already in use' : null,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              TextField(
+                controller: passwordController,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock),
+                  errorText: isPasswordInsecure ? 'Password is insecure' : null,
+                  border: const OutlineInputBorder(),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isPasswordInsecure ? Colors.orange : Colors.blue,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: isPasswordInsecure ? Colors.orange : Colors.grey,
+                    ),
+                  ),
+                ),
+                obscureText: true,
+                onChanged: (value) {
+                  setState(() {
+                    isPasswordInsecure = value.length < 8; // Example insecurity check
+                  });
+                },
+              ),
+              const SizedBox(height: 16.0),
+              TextField(
+                controller: confirmPasswordController,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  prefixIcon: const Icon(Icons.lock),
+                  errorText: isPasswordMismatch ? 'Passwords do not match' : null,
+                  border: const OutlineInputBorder(),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 16.0),
+              ElevatedButton(
+                onPressed: register,
+                child: const Text('Register'),
+              ),
+            ],
+          ),
         ),
       ),
     );
