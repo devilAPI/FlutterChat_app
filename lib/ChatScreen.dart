@@ -9,28 +9,8 @@ import 'package:transparent_image/transparent_image.dart';
 import 'package:flutter/services.dart'; // Import for clipboard functionality
 import 'Config.dart';
 import 'LoginScreen.dart';
-import 'utils.dart';
-
-class ChatApp extends StatelessWidget {
-  const ChatApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Chat App',
-      theme: ThemeData(
-        appBarTheme: const AppBarTheme(
-          toolbarTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      home: const LoginScreen(),
-    );
-  }
-}
+import 'utils/MessageUtils.dart';
+import 'utils/ApiHelper.dart';
 
 class ChatScreen extends StatefulWidget {
   final String userId;
@@ -48,7 +28,9 @@ class ChatScreen extends StatefulWidget {
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
-
+  String decryptMessage(String encryptedText, String encryptionKey) {
+    return ApiHelper.decryptMessage(encryptedText, encryptionKey);
+  }
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -141,35 +123,20 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  String encryptMessage(String message) {
-    final key = encrypt.Key.fromUtf8(
-        widget.encryptionKey.padRight(32, '0').substring(0, 32));
-    final iv = encrypt.IV.fromLength(16);
-    final encrypter = encrypt.Encrypter(encrypt.AES(key));
-
-    final encrypted = encrypter.encrypt(message, iv: iv);
-    final encryptedMessage = '${iv.base64}:${encrypted.base64}';
-
-    return encryptedMessage;
-  }
-
   Future<void> sendMessage() async {
     String message = _controller.text;
     if (message.isNotEmpty && message.length <= Config.maxMessageLength) {
-      String encryptedMessage = encryptMessage(message);
+      String encryptedMessage = ApiHelper.encryptMessage(message, widget.encryptionKey);
       setState(() {
         isSending = true; // Indicate that a message is being sent
       });
 
       try {
-        final response = await http.post(
-          Uri.parse(Config.backendUrl + '/save.php'),
-          body: {
-            'user1Id': widget.userId,
-            'user2Id': widget.recipientId,
-            'message': encryptedMessage,
-            'encryptionKey': widget.hashedKey,
-          },
+        final response = await ApiHelper.sendMessage(
+          user1Id: widget.userId,
+          user2Id: widget.recipientId,
+          message: encryptedMessage,
+          encryptionKey: widget.hashedKey,
         );
 
         if (response.statusCode == 200) {
@@ -204,39 +171,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String decryptMessage(String encryptedMessage) {
-    // Check if the encrypted message contains the expected delimiter
-    if (!encryptedMessage.contains(':')) {
-      print("Decryption error: Invalid format of encrypted message");
-      return "Decryption error: Invalid format of encrypted message";
-    }
-
-    try {
-      // Ensure the encryption key is 32 characters long
-      final key = encrypt.Key.fromUtf8(
-          widget.encryptionKey.padRight(32, '0').substring(0, 32));
-      final parts = encryptedMessage.split(':');
-
-      // Check if both parts (IV and encrypted text) are present
-      if (parts.length != 2) {
-        print("Decryption error: Expected 2 parts, but got ${parts.length}");
-        return "Decryption error: Expected 2 parts, but got ${parts.length}";
-      }
-
-      final iv = encrypt.IV.fromBase64(parts[0]);
-      final encrypter = encrypt.Encrypter(encrypt.AES(key));
-      final decrypted = encrypter.decrypt64(parts[1], iv: iv);
-
-      return decrypted;
-    } catch (e) {
-      print("Decryption error: $e");
-      return "Decryption error: $e";
-    }
-  }
 
   void copySelectedMessages() {
     final selectedTexts = selectedMessages
-        .map((index) => decryptMessage(messages[index].text))
+        .map((index) => ApiHelper.decryptMessage(messages[index].text, widget.encryptionKey))
         .join('\n');
     Clipboard.setData(ClipboardData(text: selectedTexts)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -370,9 +308,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             message: messages[index],
                             currentUserId: widget.userId,
                             isEncrypted: true,
-                            decryptMessage: decryptMessage,
+                            decryptMessage: ApiHelper.decryptMessage,
                             isSelected: selectedMessages
                                 .contains(index), // Pass selection state to bubble
+                            encryptionKey: widget.encryptionKey,
                           ),
                         ],
                       ),
@@ -473,8 +412,9 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final String currentUserId;
   final bool isEncrypted;
-  final Function decryptMessage;
+  final String Function(String, String) decryptMessage;
   final bool isSelected;
+  final String encryptionKey;
 
   const MessageBubble({
     super.key,
@@ -483,13 +423,14 @@ class MessageBubble extends StatelessWidget {
     required this.isEncrypted,
     required this.decryptMessage,
     required this.isSelected,
+    required this.encryptionKey,
   });
 
   @override
   Widget build(BuildContext context) {
     final isMe = message.senderId == currentUserId;
     final decryptedText =
-        isEncrypted ? decryptMessage(message.text) : message.text;
+        isEncrypted ? decryptMessage(message.text, encryptionKey) : message.text;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -523,7 +464,6 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class Message {
