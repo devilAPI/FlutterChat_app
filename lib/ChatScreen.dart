@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:flutter/services.dart'; // Import for clipboard functionality
+import 'package:audioplayers/audioplayers.dart';
 import 'Config.dart';
 import 'LoginScreen.dart';
 import 'utils/MessageUtils.dart';
@@ -447,12 +448,15 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            MarkdownBody(
-              data: decryptedText,
-              styleSheet: MarkdownStyleSheet(
-                p: TextStyle(color: isMe ? Colors.white : Colors.black),
+            if (Utils.isAudioUrl(decryptedText))
+              AudioPlayerWidget(audioUrl: decryptedText)
+            else
+              MarkdownBody(
+                data: decryptedText,
+                styleSheet: MarkdownStyleSheet(
+                  p: TextStyle(color: isMe ? Colors.white : Colors.black),
+                ),
               ),
-            ),
             if (Utils.isImageUrl(decryptedText))
               FadeInImage(
                 placeholder: MemoryImage(kTransparentImage),
@@ -462,6 +466,56 @@ class MessageBubble extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class AudioPlayerWidget extends StatefulWidget {
+  final String audioUrl;
+
+  const AudioPlayerWidget({Key? key, required this.audioUrl}) : super(key: key);
+
+  @override
+  _AudioPlayerWidgetState createState() => _AudioPlayerWidgetState();
+}
+
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool isPlaying = false;
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (isPlaying) {
+      _audioPlayer.pause();
+    } else {
+      _audioPlayer.play(widget.audioUrl);
+    }
+    setState(() {
+      isPlaying = !isPlaying;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+          onPressed: _togglePlayPause,
+        ),
+        Expanded(
+          child: Text(
+            widget.audioUrl,
+            style: TextStyle(color: Colors.white),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

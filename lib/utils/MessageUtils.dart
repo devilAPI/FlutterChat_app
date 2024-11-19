@@ -5,6 +5,8 @@ class Utils {
     return url.endsWith('.mp3') ||
         url.endsWith('.wav') ||
         url.endsWith('.ogg') ||
+        url.endsWith('.flac') ||
+        url.endsWith('.m4a ') ||
         url.endsWith('.aac');
   }
    static bool isImageUrl(String url) {
