@@ -7,8 +7,9 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:flutter/services.dart'; // Import for clipboard functionality
-import 'LoginScreen.dart';
 import 'Config.dart';
+import 'LoginScreen.dart';
+import 'utils.dart';
 
 class ChatApp extends StatelessWidget {
   const ChatApp({super.key});
@@ -33,15 +34,15 @@ class ChatApp extends StatelessWidget {
 
 class ChatScreen extends StatefulWidget {
   final String userId;
+  final String encryptionKey;
   final String recipientId;
   final String hashedKey;
-  final String encryptionKey;
 
   const ChatScreen({
     required this.userId,
+    required this.encryptionKey,
     required this.recipientId,
     required this.hashedKey,
-    required this.encryptionKey,
   });
 
   @override
@@ -53,14 +54,17 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   List<Message> messages = [];
   Set<int> selectedMessages = {}; // Store selected message indices
-  bool isMultiSelectMode = false; // Flag to track if multi-select mode is active
-  bool firstSelectionLongPressed = false; // Track if first selection was long pressed
+  bool isMultiSelectMode =
+      false; // Flag to track if multi-select mode is active
+  bool firstSelectionLongPressed =
+      false; // Track if first selection was long pressed
   bool isSending = false; // Flag to track if a message is being sent
   Timer? _refreshTimer;
   String? _lastMessageTimestamp;
   bool _hasNewMessage = false; // Track if there is a new message
   bool _showScrollButton = false;
-  bool isMessageTooLong = false; // Track if the message length exceeds the maximum length
+  final TextEditingController _controller = TextEditingController();
+  int _remainingChars = Config.maxMessageLength;
 
   @override
   void initState() {
@@ -81,32 +85,24 @@ class _ChatScreenState extends State<ChatScreen> {
       if (shouldShow != _showScrollButton) {
         setState(() {
           _showScrollButton = shouldShow;
-          if (!shouldShow) {
-            _hasNewMessage = false; // Reset new message indicator when hiding button
-          }
-        });
-      }
-
-      // Check if scrolled all the way down
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent) {
-        setState(() {
-          _hasNewMessage = false; // Reset new message indicator when at bottom
         });
       }
     });
+    _controller.addListener(_updateRemainingKeys);
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _controller.removeListener(_updateRemainingKeys);
+    _controller.dispose();
     super.dispose();
   }
 
   Future<void> retrieveMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://krasserserver.com:8004/chat_api/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.hashedKey}'));
+          Config.backendUrl + '/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.hashedKey}'));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -122,10 +118,8 @@ class _ChatScreenState extends State<ChatScreen> {
               .toList();
 
           // Only update state if there are new messages
-          if (mounted &&
-              (messages.isEmpty ||
-                  newMessages.last.timestamp.toString() !=
-                      _lastMessageTimestamp)) {
+          if (mounted && (messages.isEmpty || 
+              newMessages.last.timestamp.toString() != _lastMessageTimestamp)) {
             setState(() {
               messages = newMessages;
               _lastMessageTimestamp = newMessages.last.timestamp.toString();
@@ -139,9 +133,29 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void scrollToBottom() {
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  String encryptMessage(String message) {
+    final key = encrypt.Key.fromUtf8(
+        widget.encryptionKey.padRight(32, '0').substring(0, 32));
+    final iv = encrypt.IV.fromLength(16);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key));
+
+    final encrypted = encrypter.encrypt(message, iv: iv);
+    final encryptedMessage = '${iv.base64}:${encrypted.base64}';
+
+    return encryptedMessage;
+  }
+
   Future<void> sendMessage() async {
-    String message = messageController.text;
-    if (message.isNotEmpty) {
+    String message = _controller.text;
+    if (message.isNotEmpty && message.length <= Config.maxMessageLength) {
       String encryptedMessage = encryptMessage(message);
       setState(() {
         isSending = true; // Indicate that a message is being sent
@@ -160,8 +174,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
         if (response.statusCode == 200) {
           setState(() {
-            messages.add(Message(widget.userId, encryptedMessage, DateTime.now()));
-            messageController.clear();
+            messages
+                .add(Message(widget.userId, encryptedMessage, DateTime.now()));
+            _controller.clear();
+            _remainingChars = Config.maxMessageLength; // Reset remaining keys
             scrollToBottom(); // Scroll to the bottom when a new message is added
           });
         } else {
@@ -175,40 +191,78 @@ class _ChatScreenState extends State<ChatScreen> {
             const SnackBar(content: Text('Error sending message')));
       } finally {
         setState(() {
-          isSending = false;
+          isSending = false; // Reset sending status
         });
       }
-    }
-  }
-
-  void scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    } else {
+      // Handle the case where the message is too long
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Message exceeds the maximum length of ${Config.maxMessageLength} characters.'),
+        ),
       );
     }
   }
 
-  String encryptMessage(String message) {
-    // Your encryption logic here
-    return message;
+  String decryptMessage(String encryptedMessage) {
+    // Check if the encrypted message contains the expected delimiter
+    if (!encryptedMessage.contains(':')) {
+      print("Decryption error: Invalid format of encrypted message");
+      return "Decryption error: Invalid format of encrypted message";
+    }
+
+    try {
+      // Ensure the encryption key is 32 characters long
+      final key = encrypt.Key.fromUtf8(
+          widget.encryptionKey.padRight(32, '0').substring(0, 32));
+      final parts = encryptedMessage.split(':');
+
+      // Check if both parts (IV and encrypted text) are present
+      if (parts.length != 2) {
+        print("Decryption error: Expected 2 parts, but got ${parts.length}");
+        return "Decryption error: Expected 2 parts, but got ${parts.length}";
+      }
+
+      final iv = encrypt.IV.fromBase64(parts[0]);
+      final encrypter = encrypt.Encrypter(encrypt.AES(key));
+      final decrypted = encrypter.decrypt64(parts[1], iv: iv);
+
+      return decrypted;
+    } catch (e) {
+      print("Decryption error: $e");
+      return "Decryption error: $e";
+    }
   }
 
-  String decryptMessage(String encryptedMessage) {
-    // Your decryption logic here
-    return encryptedMessage;
+  void copySelectedMessages() {
+    final selectedTexts = selectedMessages
+        .map((index) => decryptMessage(messages[index].text))
+        .join('\n');
+    Clipboard.setData(ClipboardData(text: selectedTexts)).then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Copied ${selectedMessages.length} message(s)')));
+      setState(() {
+        selectedMessages.clear();
+        isMultiSelectMode = false; // Exit multi-select mode after copying
+        firstSelectionLongPressed = false; // Reset the long press state
+      });
+    });
+  }
+
+  void _updateRemainingKeys() {
+    setState(() {
+      _remainingChars = Config.maxMessageLength - _controller.text.length;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isMultiSelectMode
-            ? '${selectedMessages.length} Selected'
-            : 'Chat with ${widget.recipientId}'),
-        backgroundColor: Colors.deepPurple,
+        title: Text(isMultiSelectMode 
+          ? '${selectedMessages.length} Selected' 
+          : 'Chat with ${widget.recipientId}'),
+        backgroundColor: Config.accentColor,
         actions: [
           if (isMultiSelectMode) ...[
             IconButton(
@@ -244,67 +298,138 @@ class _ChatScreenState extends State<ChatScreen> {
                   controller: _scrollController,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
-                    return ListTile(
-                      title: Text(message.content),
-                      selected: selectedMessages.contains(index),
-                      onLongPress: () {
-                        setState(() {
-                          isMultiSelectMode = true;
-                          selectedMessages.add(index);
-                        });
-                      },
+                    DateTime currentMessageDate = messages[index].timestamp;
+                    String formattedDate =
+                        DateFormat.yMMMMd().format(currentMessageDate);
+
+                    bool showDateSeparator = index == 0 ||
+                        !isSameDate(
+                            currentMessageDate, messages[index - 1].timestamp);
+
+                    return GestureDetector(
                       onTap: () {
+                        // If already in selection mode, toggle selection state
                         if (isMultiSelectMode) {
                           setState(() {
                             if (selectedMessages.contains(index)) {
                               selectedMessages.remove(index);
+                              // Exit multi-select mode if no messages are selected
                               if (selectedMessages.isEmpty) {
                                 isMultiSelectMode = false;
+                                firstSelectionLongPressed =
+                                    false; // Reset the long press state
                               }
                             } else {
                               selectedMessages.add(index);
                             }
                           });
                         }
+                        // If not in selection mode, initiate selection mode
+                        else {
+                          setState(() {
+                            firstSelectionLongPressed =
+                                false; // Reset the long press state
+                          });
+                        }
                       },
+                      onLongPress: () {
+                        // If not in selection mode, enter selection mode and select the first message
+                        if (!isMultiSelectMode) {
+                          setState(() {
+                            selectedMessages.add(index);
+                            isMultiSelectMode = true; // Enter multi-select mode
+                            firstSelectionLongPressed =
+                                true; // Set long press state
+                          });
+                        }
+                        // If already in selection mode, allow multi-select
+                        else {
+                          setState(() {
+                            selectedMessages.add(index);
+                          });
+                        }
+                      },
+                      child: Column(
+                        children: [
+                          if (showDateSeparator)
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2, horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                formattedDate,
+                                style: const TextStyle(
+                                    color: Colors.black54, fontSize: 14),
+                              ),
+                            ),
+                          MessageBubble(
+                            message: messages[index],
+                            currentUserId: widget.userId,
+                            isEncrypted: true,
+                            decryptMessage: decryptMessage,
+                            isSelected: selectedMessages
+                                .contains(index), // Pass selection state to bubble
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: messageController,
-                        decoration: InputDecoration(
-                          labelText: 'Type a message...',
-                          border: OutlineInputBorder(),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: isMessageTooLong ? Colors.orange : Colors.blue,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(
-                              color: isMessageTooLong ? Colors.orange : Colors.grey,
-                            ),
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            isMessageTooLong = value.length > Config.maxMessageLength;
-                          });
-                        },
+                Row(
+                children: [
+                  Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                    labelText: 'Message',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(
+                      color: _remainingChars < 0 ? Colors.orange : Colors.grey,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: isSending ? null : sendMessage,
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                      color: _remainingChars < 0 ? Colors.orange : Colors.grey,
+                      ),
                     ),
-                  ],
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                      color: _remainingChars < 0 ? Colors.orange : Config.accentColor,
+                      ),
+                    ),
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null, // Allows the TextField to expand vertically
+                    onChanged: (text) {
+                    _updateRemainingKeys();
+                    },
+                    onSubmitted: (text) {
+                    // Send message when Enter is pressed
+                    sendMessage();
+                    },
+                  ),
+                  ),
+                  IconButton(
+                  icon: isSending
+                    ? const CircularProgressIndicator()
+                    : const Icon(Icons.send),
+                  onPressed:
+                    isSending ? null : sendMessage, // Disable while sending
+                  ),
+                ],
+                ),
+                Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Characters remaining: $_remainingChars',
+                  style: TextStyle(
+                  color: _remainingChars < 0 ? Colors.orange : Colors.black54,
+                  ),
                 ),
               ),
             ],
@@ -314,7 +439,7 @@ class _ChatScreenState extends State<ChatScreen> {
               right: 16.0,
               bottom: 80.0,
               child: FloatingActionButton(
-                backgroundColor: _hasNewMessage ? Colors.deepPurple : Colors.white,
+                backgroundColor: _hasNewMessage ? Config.accentColor : Colors.white,
                 onPressed: () {
                   _scrollController.animateTo(
                     _scrollController.position.maxScrollExtent,
@@ -328,7 +453,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
                 child: Icon(
                   Icons.arrow_downward,
-                  color: _hasNewMessage ? Colors.white : Colors.deepPurple,
+                  color: _hasNewMessage ? Colors.white : Config.accentColor,
                 ),
               ),
             ),
@@ -337,26 +462,74 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void copySelectedMessages() {
-    final selectedTexts = selectedMessages
-        .map((index) => decryptMessage(messages[index].content))
-        .join('\n');
-    Clipboard.setData(ClipboardData(text: selectedTexts)).then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Copied ${selectedMessages.length} message(s)')));
-      setState(() {
-        selectedMessages.clear();
-        isMultiSelectMode = false; // Exit multi-select mode after copying
-        firstSelectionLongPressed = false; // Reset the long press state
-      });
-    });
+  bool isSameDate(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date2.day == date2.day;
   }
+}
+
+class MessageBubble extends StatelessWidget {
+  final Message message;
+  final String currentUserId;
+  final bool isEncrypted;
+  final Function decryptMessage;
+  final bool isSelected;
+
+  const MessageBubble({
+    super.key,
+    required this.message,
+    required this.currentUserId,
+    required this.isEncrypted,
+    required this.decryptMessage,
+    required this.isSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMe = message.senderId == currentUserId;
+    final decryptedText =
+        isEncrypted ? decryptMessage(message.text) : message.text;
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Config.accentColor[200]
+              : (isMe ? Config.accentColor[500] : Colors.grey[300]),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            MarkdownBody(
+              data: decryptedText,
+              styleSheet: MarkdownStyleSheet(
+                p: TextStyle(color: isMe ? Colors.white : Colors.black),
+              ),
+            ),
+            if (Utils.isImageUrl(decryptedText))
+              FadeInImage(
+                placeholder: MemoryImage(kTransparentImage),
+                image: NetworkImage(decryptedText),
+                fit: BoxFit.cover,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }
 
 class Message {
   final String senderId;
-  final String content;
+  final String text;
   final DateTime timestamp;
 
-  Message(this.senderId, this.content, this.timestamp);
+  Message(this.senderId, this.text, this.timestamp);
 }
