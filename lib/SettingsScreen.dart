@@ -28,7 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Colors.deepPurple,
       ),
       body: ListTile(
-        title: const Text('Show Images'),
+        title: const Text('Show Images (indev)'),
         trailing: Switch(
           value: _showImages,
           onChanged: (value) {
