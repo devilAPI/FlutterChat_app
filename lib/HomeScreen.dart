@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void logout() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
@@ -86,37 +86,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: <Widget>[
                   TextField(
                     controller: recipientController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Recipient ID',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.person),
                     ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   TextField(
                     controller: encryptionKeyController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Encryption Key',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.lock),
                     ),
                     obscureText: true,
                   ),
-                  SizedBox(height: 32),
+                  const SizedBox(height: 32),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
                       ElevatedButton(
                         onPressed: startChat,
-                        child: Text('Start Chat'),
+                        child: const Text('Start Chat'),
                       ),
                       ElevatedButton(
                         onPressed: openSettings,
-                        child: Text('Settings'),
+                        child: const Text('Settings'),
                       ),
                       ElevatedButton(
                         onPressed: logout,
-                        child: Text('Logout'),
+                        child: const Text('Logout'),
                       ),
                     ],
                   ),

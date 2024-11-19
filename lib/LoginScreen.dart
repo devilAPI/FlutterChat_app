@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     try {
       final response = await http.post(
-        Uri.parse(Config.backendUrl + '/login.php'),
+        Uri.parse('${Config.backendUrl}/login.php'),
         headers: <String, String>{
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void navigateToRegister() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RegisterScreen()),
+      MaterialPageRoute(builder: (context) => const RegisterScreen()),
     );
   }
 

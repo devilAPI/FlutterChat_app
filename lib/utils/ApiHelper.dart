@@ -10,7 +10,7 @@ class ApiHelper {
     required String encryptionKey,
   }) async {
     final response = await http.post(
-      Uri.parse(Config.backendUrl + '/save.php'),
+      Uri.parse('${Config.backendUrl}/save.php'),
       body: {
         'user1Id': user1Id,
         'user2Id': user2Id,

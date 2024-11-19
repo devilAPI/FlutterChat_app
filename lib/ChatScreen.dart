@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:flutter/services.dart'; // Import for clipboard functionality
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'Config.dart';
-import 'LoginScreen.dart';
 import 'utils/MessageUtils.dart';
 import 'utils/ApiHelper.dart';
 
@@ -19,7 +17,7 @@ class ChatScreen extends StatefulWidget {
   final String recipientId;
   final String hashedKey;
 
-  const ChatScreen({
+  const ChatScreen({super.key, 
     required this.userId,
     required this.encryptionKey,
     required this.recipientId,
@@ -85,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> retrieveMessages() async {
     try {
       final response = await http.get(Uri.parse(
-          Config.backendUrl + '/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.hashedKey}'));
+          '${Config.backendUrl}/retrieve.php?user1Id=${widget.userId}&user2Id=${widget.recipientId}&encryptionKey=${widget.hashedKey}'));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -165,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } else {
       // Handle the case where the message is too long
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Message exceeds the maximum length of ${Config.maxMessageLength} characters.'),
         ),
       );
@@ -462,6 +460,9 @@ class MessageBubble extends StatelessWidget {
                 placeholder: MemoryImage(kTransparentImage),
                 image: NetworkImage(decryptedText),
                 fit: BoxFit.cover,
+                imageErrorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.error, color: Colors.red);
+                },
               ),
           ],
         ),
@@ -484,16 +485,22 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   bool isPlaying = false;
 
   @override
+  void initState() {
+    super.initState();
+    _audioPlayer.setUrl(widget.audioUrl);
+  }
+
+  @override
   void dispose() {
     _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _togglePlayPause() {
+  void _togglePlayPause() async {
     if (isPlaying) {
-      _audioPlayer.pause();
+      await _audioPlayer.pause();
     } else {
-      _audioPlayer.play(widget.audioUrl);
+      await _audioPlayer.play();
     }
     setState(() {
       isPlaying = !isPlaying;

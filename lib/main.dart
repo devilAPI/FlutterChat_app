@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat/LoginScreen.dart';
 
 void main() {
-  runApp(ChatApp());
+  runApp(const ChatApp());
 }
 
 class ChatApp extends StatelessWidget {

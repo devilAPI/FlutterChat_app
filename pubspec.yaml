@@ -38,6 +38,7 @@ dependencies:
   flutter_markdown: ^0.6.10  # Add this line
   crypto: ^3.0.1
   audioplayers: ^0.20.1
+  just_audio: ^0.9.18
 
 
   # The following adds the Cupertino Icons font to your application.
