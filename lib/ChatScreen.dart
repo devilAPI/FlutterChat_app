@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:intl/intl.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:transparent_image/transparent_image.dart';
-import 'package:flutter/services.dart'; // Import for clipboard functionality
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'package:intl/intl.dart';
 import 'Config.dart';
 import 'utils/MessageUtils.dart';
 import 'utils/ApiHelper.dart';
@@ -17,7 +18,8 @@ class ChatScreen extends StatefulWidget {
   final String recipientId;
   final String hashedKey;
 
-  const ChatScreen({super.key, 
+  const ChatScreen({
+    super.key,
     required this.userId,
     required this.encryptionKey,
     required this.recipientId,
@@ -27,9 +29,7 @@ class ChatScreen extends StatefulWidget {
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
-  String decryptMessage(String encryptedText, String encryptionKey) {
-    return ApiHelper.decryptMessage(encryptedText, encryptionKey);
-  }
+
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -46,10 +46,14 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showScrollButton = false;
   final TextEditingController _controller = TextEditingController();
   int _remainingChars = Config.maxMessageLength;
+  bool _showImages = true;
+  bool _showAudio = true;
+  bool _enableMarkdown = true;
 
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     retrieveMessages();
     // Start periodic refresh every 3 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -70,6 +74,15 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
     _controller.addListener(_updateRemainingKeys);
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _showImages = prefs.getBool('showImages') ?? true;
+      _showAudio = prefs.getBool('showAudio') ?? true;
+      _enableMarkdown = prefs.getBool('enableMarkdown') ?? true;
+    });
   }
 
   @override
@@ -311,6 +324,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             isSelected: selectedMessages
                                 .contains(index), // Pass selection state to bubble
                             encryptionKey: widget.encryptionKey,
+                            showImages: _showImages,
+                            showAudio: _showAudio,
+                            enableMarkdown: _enableMarkdown,
                           ),
                         ],
                       ),
@@ -414,6 +430,9 @@ class MessageBubble extends StatelessWidget {
   final String Function(String, String) decryptMessage;
   final bool isSelected;
   final String encryptionKey;
+  final bool showImages;
+  final bool showAudio;
+  final bool enableMarkdown;
 
   const MessageBubble({
     super.key,
@@ -423,6 +442,9 @@ class MessageBubble extends StatelessWidget {
     required this.decryptMessage,
     required this.isSelected,
     required this.encryptionKey,
+    required this.showImages,
+    required this.showAudio,
+    required this.enableMarkdown,
   });
 
   @override
@@ -446,16 +468,21 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (Utils.isAudioUrl(decryptedText))
+            if (showAudio && Utils().isAudioUrl(decryptedText))
               AudioPlayerWidget(audioUrl: decryptedText)
-            else
+            else if (enableMarkdown)
               MarkdownBody(
                 data: decryptedText,
                 styleSheet: MarkdownStyleSheet(
                   p: TextStyle(color: isMe ? Colors.white : Colors.black),
                 ),
+              )
+            else
+              Text(
+                decryptedText,
+                style: TextStyle(color: isMe ? Colors.white : Colors.black),
               ),
-            if (Utils.isImageUrl(decryptedText))
+            if (showImages && Utils().isImageUrl(decryptedText))
               FadeInImage(
                 placeholder: MemoryImage(kTransparentImage),
                 image: NetworkImage(decryptedText),

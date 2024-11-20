@@ -1,23 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'Config.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final bool showImages;
-  final ValueChanged<bool> onShowImagesChanged;
-
-  const SettingsScreen(
-      {super.key, required this.showImages, required this.onShowImagesChanged});
+  const SettingsScreen({Key? key}) : super(key: key);
 
   @override
-  _SettingsScreenState createState() => _SettingsScreenState();
+  SettingsScreenState createState() => SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  late bool _showImages;
+class SettingsScreenState extends State<SettingsScreen> {
+  bool _showImages = true;
+  bool _showAudio = true;
+  bool _enableMarkdown = true;
 
   @override
   void initState() {
     super.initState();
-    _showImages = widget.showImages;
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _showImages = prefs.getBool('showImages') ?? true;
+      _showAudio = prefs.getBool('showAudio') ?? true;
+      _enableMarkdown = prefs.getBool('enableMarkdown') ?? true;
+    });
+  }
+
+  Future<void> _saveSetting(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool(key, value);
   }
 
   @override
@@ -25,18 +39,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Config.accentColor,
       ),
-      body: ListTile(
-        title: const Text('Show Images (indev)'),
-        trailing: Switch(
-          value: _showImages,
-          onChanged: (value) {
-            setState(() {
-              _showImages = value;
-            });
-            widget.onShowImagesChanged(value); // Call the callback
-          },
+      body: Center(
+        child: Column(
+          children: [
+            SwitchListTile(
+              title: const Text('Allow Images'),
+              secondary: const Icon(Icons.image),
+              value: _showImages,
+              onChanged: (bool value) {
+                setState(() {
+                  _showImages = value;
+                  _saveSetting('showImages', value);
+                });
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Allow Audio'),
+              secondary: const Icon(Icons.audiotrack),
+              value: _showAudio,
+              onChanged: (bool value) {
+                setState(() {
+                  _showAudio = value;
+                  _saveSetting('showAudio', value);
+                });
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Enable Markdown'),
+              secondary: const Icon(Icons.tag),
+              value: _enableMarkdown,
+              onChanged: (bool value) {
+                setState(() {
+                  _enableMarkdown = value;
+                  _saveSetting('enableMarkdown', value);
+                });
+              },
+            ),
+          ],
         ),
       ),
     );

@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController recipientController = TextEditingController();
   final TextEditingController encryptionKeyController = TextEditingController();
   bool _showImages = true;
+  bool _showAudio = true;
 
   void startChat() {
     String recipientId = recipientController.text;
@@ -50,12 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => SettingsScreen(
-          showImages: _showImages,
-          onShowImagesChanged: (value) {
-            setState(() {
-              _showImages = value;
-            });
-          },
         ),
       ),
     );
